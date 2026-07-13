@@ -4,11 +4,11 @@ import { searchCurriculum } from "../domain/search.js";
 import { conceptView, toolResult } from "./common.js";
 
 export const searchCurriculumInputSchema = z.object({
-  query: z.string().min(1).max(200),
-  schoolLevel: z.enum(["elementary", "middle", "high"]).optional(),
-  subject: z.string().min(1).max(50).optional(),
-  grade: z.number().int().min(1).max(6).optional(),
-  limit: z.number().int().min(1).max(10).optional().default(5),
+  query: z.string().min(1).max(200).describe("찾고 싶은 개념·과목·영역·성취기준 코드 또는 자연어 질문"),
+  schoolLevel: z.enum(["elementary", "middle", "high"]).optional().describe("선택 학교급 필터: elementary, middle, high"),
+  subject: z.string().min(1).max(50).optional().describe("선택 과목 또는 교과군 필터(예: 수학, 과학)"),
+  grade: z.number().int().min(1).max(6).optional().describe("선택 학년 입력. 초등은 1~6 개별 학년 필터이며, 중·고등은 1~3 범위 검증용으로 개별 학년 일치를 보장하지 않습니다"),
+  limit: z.number().int().min(1).max(10).optional().default(5).describe("반환 후보 수. 기본 5, 최대 10"),
 });
 
 async function handler(rawInput: unknown) {

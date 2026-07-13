@@ -8,11 +8,11 @@ import { getUserStore } from "../store/store.js";
 import type { ConceptStatus } from "../store/types.js";
 
 export const getCurriculumOverviewInputSchema = z.object({
-  schoolLevel: z.enum(["elementary", "middle", "high"]),
-  grade: z.number().int().min(1).max(6).optional(),
-  subject: z.string().min(1).max(50),
-  childId: z.string().min(1).optional(),
-  limit: z.number().int().min(1).max(100).optional().default(30),
+  schoolLevel: z.enum(["elementary", "middle", "high"]).describe("조회할 학교급: elementary, middle, high"),
+  grade: z.number().int().min(1).max(6).optional().describe("선택 학년 입력. 초등은 1~6 개별 학년 필터이며, 중·고등은 1~3 범위 검증용으로 개별 학년 일치를 보장하지 않습니다"),
+  subject: z.string().min(1).max(50).describe("조회할 과목 또는 교과군(예: 수학, 과학)"),
+  childId: z.string().min(1).optional().describe("저장된 점검 이력을 함께 표시할 기존 자녀 프로필 ID. 상태를 변경하지 않습니다"),
+  limit: z.number().int().min(1).max(100).optional().default(30).describe("반환할 토픽 수. 기본 30, 최대 100"),
 });
 
 function gradeMatches(gradeBand: string | null, grade: number | undefined): boolean {
@@ -59,7 +59,7 @@ async function handler(rawInput: unknown) {
 export const getCurriculumOverviewTool: ToolDefinition = {
   name: "get_curriculum_overview",
   title: "교육과정 개요",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), show curriculum domains, standards, and topics for a school level and subject, optionally overlaying a child profile's stored check history.",
+  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), show curriculum domains, standards, and topics for a school level and subject. Optional childId only overlays that authenticated user's stored check history and never changes state.",
   inputSchema: getCurriculumOverviewInputSchema,
   handler,
 };

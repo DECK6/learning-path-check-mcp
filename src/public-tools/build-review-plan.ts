@@ -10,13 +10,13 @@ import type { ReviewPlan } from "../store/types.js";
 import { conceptView, requireChild, timestamp, toolResult } from "./common.js";
 
 export const buildReviewPlanInputSchema = z.object({
-  childId: z.string().min(1),
-  targetConceptId: z.string().min(1),
-  reviewConceptIds: z.array(z.string().min(1)).min(1).max(50).optional(),
-  durationWeeks: z.number().int().min(1).max(12).optional().default(2),
-  minutesPerDay: z.number().int().min(5).max(240).optional(),
-  startDate: z.string().optional(),
-  createdAt: z.string().optional(),
+  childId: z.string().min(1).describe("복습 계획을 저장할 기존 자녀 프로필 ID"),
+  targetConceptId: z.string().min(1).describe("복습 후 다시 확인할 목표 개념 ID"),
+  reviewConceptIds: z.array(z.string().min(1)).min(1).max(50).optional().describe("명시적 복습 개념 ID 목록. 생략하면 저장된 review_needed 개념을 사용하며 둘 다 없으면 생성할 수 없습니다"),
+  durationWeeks: z.number().int().min(1).max(12).optional().default(2).describe("계획 기간(주). 기본 2, 범위 1~12"),
+  minutesPerDay: z.number().int().min(5).max(240).optional().describe("하루 복습 시간(분). 생략하면 프로필 설정 또는 20분"),
+  startDate: z.string().optional().describe("계획 시작일(YYYY-MM-DD). 생략하면 현재 날짜"),
+  createdAt: z.string().optional().describe("선택 생성 시각(YYYY-MM-DD 또는 ISO 날짜·시간). 생략하면 현재 시각"),
 });
 
 async function handler(rawInput: unknown) {
@@ -80,7 +80,7 @@ async function handler(rawInput: unknown) {
 export const buildReviewPlanTool: ToolDefinition = {
   name: "build_review_plan",
   title: "복습 계획 만들기",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), create and store a prerequisite-ordered daily review plan and calendar-ready events for a child and target concept.",
+  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), create and store a prerequisite-ordered daily review plan and calendar-ready events. Provide reviewConceptIds, or omit them only when the child already has saved review_needed concept statuses.",
   inputSchema: buildReviewPlanInputSchema,
   handler,
 };

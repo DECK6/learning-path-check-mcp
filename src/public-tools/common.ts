@@ -1,7 +1,7 @@
 import type { McpToolResult, CompiledConcept } from "../lib/types.js";
 import { compiledMeta } from "../domain/data.js";
 import { responseMeta } from "../config/version.js";
-import { currentScopeKey } from "../identity.js";
+import { requireAuthenticatedScopeKey } from "../identity.js";
 import { getUserStore } from "../store/store.js";
 import type { ChildProfile } from "../store/types.js";
 import { sanitizeLearningTerms } from "../presenters/terms.js";
@@ -37,9 +37,10 @@ export function conceptView(concept: CompiledConcept): Record<string, unknown> {
 }
 
 export async function requireChild(childId: string): Promise<{ child: ChildProfile; scopeKey: string }> {
-  const scopeKey = currentScopeKey();
+  const scopeKey = requireAuthenticatedScopeKey();
   const child = await getUserStore().getChild(scopeKey, childId);
   if (!child) throw new Error("자녀 프로필을 찾을 수 없습니다.");
+  if (!child.guardianConsent) throw new Error("이 프로필은 보호자 저장 동의 기록이 없습니다. 프로필 관리에서 명시적 동의를 기록한 뒤 다시 시도해 주세요.");
   return { child, scopeKey };
 }
 

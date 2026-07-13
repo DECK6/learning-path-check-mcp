@@ -1,11 +1,14 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { MAX_BODY_BYTES } from "../config/limits.js";
 import { SERVICE_ID, SERVICE_VERSION } from "../config/version.js";
 import { compiledMeta } from "../domain/data.js";
-import { runWithRequestHeaders, type RequestHeaders } from "../identity.js";
+import { assertProductionRuntimeConfiguration, runWithRequestHeaders, type RequestHeaders } from "../identity.js";
 import { PUBLIC_TOOLS } from "../public-tools/registry.js";
 import { createMcpServer } from "./mcp-server.js";
+import { getUserStore } from "../store/store.js";
+import type { ChildProfile } from "../store/types.js";
 
 function healthBody(): Record<string, unknown> {
   return {
@@ -103,7 +106,36 @@ export function createHttpServer(): Server {
   });
 }
 
+async function assertProductionStoreReady(): Promise<void> {
+  if (process.env.NODE_ENV !== "production") return;
+  const store = getUserStore();
+  const token = randomUUID();
+  const scopeKey = `startup-health-${token}`;
+  const now = new Date().toISOString();
+  const child: ChildProfile = {
+    id: `startup-health-${token}`,
+    nickname: "startup-health",
+    schoolLevel: "elementary",
+    grade: 1,
+    interestedSubjects: [],
+    learningGoals: [],
+    guardianConsent: { version: "v1", grantedAt: now },
+    createdAt: now,
+    updatedAt: now,
+  };
+  let written = false;
+  try {
+    await store.upsertChild(scopeKey, child);
+    written = true;
+    if (!(await store.getChild(scopeKey, child.id))) throw new Error("운영 저장소 읽기 검증에 실패했습니다.");
+  } finally {
+    if (written) await store.deleteAllForScope(scopeKey);
+  }
+}
+
 export async function startServer(options: { port?: number; host?: string } = {}): Promise<Server> {
+  assertProductionRuntimeConfiguration();
+  await assertProductionStoreReady();
   const port = options.port ?? Number(process.env.PORT ?? 8080);
   const host = options.host ?? "0.0.0.0";
   const server = createHttpServer();

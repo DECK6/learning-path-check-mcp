@@ -5,21 +5,20 @@ export type RequestHeaders = Record<string, string | string[] | undefined>;
 
 const context = new AsyncLocalStorage<RequestHeaders>();
 
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+function playMcpUserId(): string | undefined {
+  const value = (context.getStore() ?? {})["x-playmcp-user-id"];
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 256 || /[,\r\n]/.test(normalized)) return undefined;
+  return normalized;
 }
 
-function jwtSubject(authorization: string | undefined): string | undefined {
-  if (!authorization?.startsWith("Bearer ")) return undefined;
-  const token = authorization.slice(7).trim();
-  const payload = token.split(".")[1];
-  if (!payload) return undefined;
-  try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: unknown };
-    return typeof parsed.sub === "string" && parsed.sub.trim() ? parsed.sub.trim() : undefined;
-  } catch {
-    return undefined;
+function scopeSalt(env: NodeJS.ProcessEnv = process.env): string {
+  const salt = env.USER_SCOPE_SALT?.trim();
+  if (!salt || Buffer.byteLength(salt, "utf8") < 32) {
+    throw new Error("사용자 데이터 보호 설정이 완료되지 않았습니다.");
   }
+  return salt;
 }
 
 export function runWithRequestHeaders<T>(headers: RequestHeaders, callback: () => T): T {
@@ -27,16 +26,24 @@ export function runWithRequestHeaders<T>(headers: RequestHeaders, callback: () =
 }
 
 export function currentScopeKey(): string {
-  const headers = context.getStore() ?? {};
-  const identity = first(headers["x-playmcp-user-id"])
-    ?? first(headers["x-user-id"])
-    ?? first(headers["x-forwarded-user"])
-    ?? jwtSubject(first(headers.authorization));
+  const identity = playMcpUserId();
   if (!identity) return "public";
-  const salt = process.env.USER_SCOPE_SALT ?? "learning-path-check-public-salt-v1";
-  return createHash("sha256").update(`${salt}\0${identity}`).digest("hex");
+  return createHash("sha256").update(`${scopeSalt()}\0${identity}`).digest("hex");
+}
+
+export function requireAuthenticatedScopeKey(): string {
+  if (!playMcpUserId()) throw new Error("로그인한 PlayMCP 사용자만 학습 기록을 저장하거나 조회할 수 있습니다.");
+  return currentScopeKey();
 }
 
 export function isPublicScope(): boolean {
   return currentScopeKey() === "public";
+}
+
+export function assertProductionRuntimeConfiguration(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV !== "production") return;
+  if (!env.DATABASE_URL?.trim() && !env.STORE_PATH?.trim()) {
+    throw new Error("운영 환경에는 DATABASE_URL 또는 STORE_PATH가 필요합니다.");
+  }
+  scopeSalt(env);
 }

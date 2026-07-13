@@ -5,8 +5,8 @@ import { pathMarkdown } from "../presenters/concept-markdown.js";
 import { conceptView, toolResult } from "./common.js";
 
 export const traceLearningPathInputSchema = z.object({
-  conceptId: z.string().min(1),
-  maxDepth: z.number().int().min(1).max(6).optional().default(6),
+  conceptId: z.string().min(1).describe("검색 또는 교육과정 개요에서 받은 목표 개념 ID"),
+  maxDepth: z.number().int().min(1).max(6).optional().default(6).describe("선수·후속 관계를 탐색할 최대 깊이. 기본 6, 범위 1~6"),
 });
 
 function edgeView(step: GraphStep): Record<string, unknown> {
@@ -53,7 +53,7 @@ async function handler(rawInput: unknown) {
 export const traceLearningPathTool: ToolDefinition = {
   name: "trace_learning_path",
   title: "학습 경로 추적",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), trace reviewed concept-level prerequisites and successors across elementary, middle, and supported high-school curriculum while exposing relation basis and review status.",
+  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), trace reviewed concept-level prerequisites and successors across elementary, middle, and supported high-school curriculum while exposing relation basis and review status. Course and school-level transitions are not asserted as formal prerequisites.",
   inputSchema: traceLearningPathInputSchema,
   handler,
 };

@@ -67,21 +67,30 @@ bun run start
 | 변수 | 기본값 | 설명 |
 |---|---|---|
 | `PORT` | `8080` | HTTP 포트 |
-| `TIME_ZONE` | `Asia/Seoul` | 날짜를 생략한 계획·리포트의 기준 시간대 |
+| `TIME_ZONE` | `Asia/Seoul` | 날짜를 생략한 계획·예정 활동·리포트의 기준 시간대 |
 | `DATABASE_URL` | 없음 | 설정 시 PostgreSQL 영속 저장소 사용 |
 | `STORE_PATH` | 없음 | DB가 없을 때 원자적 JSON 파일 저장소 사용 |
-| `USER_SCOPE_SALT` | 개발용 고정값 | 전달된 사용자 식별자를 내부 스코프 키로 해시할 때 사용 |
+| `USER_SCOPE_SALT` | 없음 | 로그인 사용자 식별자를 내부 스코프 키로 해시하는 32바이트 이상의 비밀값 |
 
-저장소 우선순위는 `DATABASE_URL` → `STORE_PATH` → 프로세스 메모리입니다. 운영에서는 `DATABASE_URL`과 임의의 긴 `USER_SCOPE_SALT`를 설정하세요. 식별 헤더가 없으면 비추측성 `childId`가 접근 권한 역할을 하는 공개 스코프 모드로 동작합니다.
+저장소 우선순위는 `DATABASE_URL` → `STORE_PATH` → 프로세스 메모리입니다. 단, `NODE_ENV=production`에서는 `DATABASE_URL` 또는 `STORE_PATH`와 32바이트 이상의 `USER_SCOPE_SALT`가 없거나 저장소 읽기·쓰기 검증이 실패하면 서버가 시작하지 않습니다. Docker 기본값은 `/data/learning-path-store.json` 파일 저장소이며, 다중 인스턴스·장애조치 환경에서는 PostgreSQL을 사용하세요.
 
-인식하는 사용자 식별자는 `x-playmcp-user-id`, `x-user-id`, `x-forwarded-user`, Bearer JWT의 `sub` 순서입니다. JWT 서명을 인증하는 기능은 아니므로 배포 경계의 인증 프록시가 헤더를 신뢰할 수 있게 보장해야 합니다.
+`USER_SCOPE_SALT`는 저장소를 처음 만들 때 한 번 생성한 뒤 비밀 저장소에 보관하고, 저장소 수명 동안 모든 재시작·재배포·복제본에서 같은 값을 사용해야 합니다. 값을 바꾸면 기존 사용자 스코프를 다시 찾을 수 없습니다. 로컬에서 상태 저장 기능을 시험할 때도 32바이트 이상의 salt와 쓰기 가능한 `STORE_PATH`를 설정하세요.
+
+사용자 식별자는 `x-playmcp-user-id` 하나만 신뢰합니다. 게이트웨이·프록시는 외부 요청의 동명 헤더를 제거하고 인증된 PlayMCP 사용자 값만 주입해야 합니다. 이 서버는 헤더 자체의 서명을 검증하지 않으므로, 해당 보장이 없는 일반 인터넷에 직접 노출하는 구성은 사용자 데이터 저장용으로 지원하지 않습니다. 식별자가 없는 사용자는 교육과정 검색과 공개 학습경로 조회만 가능하며, 프로필·점검·계획·진행 기록의 저장 및 조회는 차단됩니다.
+
+프로필 생성에는 보호자 저장 동의(`guardianConsent: true`)가 필요하며 동의 버전과 시각을 기록합니다. 실명·학교명·연락처·주소·주민번호·이메일·결제정보·성적표 원문을 입력하지 마세요. 이메일, 전화번호, 주민번호, 카드번호처럼 보이는 입력은 도구 호출 단계에서 거부됩니다.
 
 ## Docker
 
 ```bash
 docker build -t learning-path-check-mcp .
+docker volume create learning-path-check-data
+umask 077
+printf 'USER_SCOPE_SALT=%s\n' "$(openssl rand -base64 48)" > .env.production
+# .env.production은 한 번만 만들고 안전하게 보관해 재배포 때 그대로 재사용합니다.
 docker run --rm -p 8080:8080 \
-  -e USER_SCOPE_SALT='replace-with-a-long-random-value' \
+  --env-file .env.production \
+  -v learning-path-check-data:/data \
   learning-path-check-mcp
 ```
 

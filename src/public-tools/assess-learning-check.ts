@@ -11,14 +11,14 @@ import type { ConceptStatus } from "../store/types.js";
 import { conceptView, requireChild, timestamp, toolResult } from "./common.js";
 
 export const assessLearningCheckInputSchema = z.object({
-  childId: z.string().min(1),
-  checkId: z.string().min(1),
+  childId: z.string().min(1).describe("점검 소유자인 기존 자녀 프로필 ID"),
+  checkId: z.string().min(1).describe("create_learning_check가 반환한 점검 ID"),
   responses: z.array(z.object({
-    questionId: z.string().min(1),
-    outcome: z.enum(OUTCOMES),
-    response: z.string().optional(),
-  })).max(MAX_CHECK_ITEMS).optional().default([]),
-  assessedAt: z.string().optional(),
+    questionId: z.string().min(1).describe("해당 점검이 반환한 질문 ID"),
+    outcome: z.enum(OUTCOMES).describe("AI 클라이언트가 답을 분류한 결과: ok, partial, fail, unknown 중 하나"),
+    response: z.string().optional().describe("선택 답변 요약. 앞뒤 공백을 제거하고 처음 200자만 저장하며 서버가 자유 텍스트를 채점하지 않습니다"),
+  })).max(MAX_CHECK_ITEMS).optional().default([]).describe("질문별 판정 입력. 각 questionId는 한 번만 전달하며 빠진 질문은 unknown으로 기록됩니다"),
+  assessedAt: z.string().optional().describe("선택 판정 시각(YYYY-MM-DD 또는 ISO 날짜·시간). 생략하면 현재 시각"),
 });
 
 async function handler(rawInput: unknown) {
@@ -89,7 +89,7 @@ async function handler(rawInput: unknown) {
 export const assessLearningCheckTool: ToolDefinition = {
   name: "assess_learning_check",
   title: "학습 점검 판정",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), store a deterministic learning status for every question. Before calling, map the child's answer to outcome=ok|partial|fail|unknown; free text alone is never graded by this server.",
+  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), store a deterministic learning status for every question. Before calling, map the child's answer to outcome=ok|partial|fail|unknown; free text alone is never graded by this server.",
   inputSchema: assessLearningCheckInputSchema,
   handler,
 };

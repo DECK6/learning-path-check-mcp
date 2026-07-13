@@ -113,8 +113,9 @@ tests/
 annotations:
 - 조회 5종 (`search_curriculum`, `get_curriculum_overview`, `trace_learning_path`, `get_upcoming_learning_actions`, `get_parent_learning_report`): readOnly=true, idempotent=true, destructive=false, openWorld=false
   - 단 overview/upcoming/report는 프로필을 읽으므로 readOnly=true 유지(상태 변경 없음)
-- 쓰기 5종 (`manage_child_profile`, `create_learning_check`, `assess_learning_check`, `build_review_plan`, `record_learning_progress`): readOnly=false, idempotent=false, destructive=false, openWorld=false
-  - `manage_child_profile`의 action=delete도 destructiveHint=false로 두되 삭제 전 확인 문구를 출력에 포함
+- 쓰기 4종 (`create_learning_check`, `assess_learning_check`, `build_review_plan`, `record_learning_progress`): readOnly=false, idempotent=false, destructive=false, openWorld=false
+- 프로필 관리 (`manage_child_profile`): readOnly=false, idempotent=false, destructive=true, openWorld=false
+  - action=delete는 자녀 관련 점검·상태·계획·진행 기록을 연쇄 삭제하므로 삭제 전 확인과 `confirmDelete=true`가 필수
 
 핵심 동작 규칙:
 
@@ -167,14 +168,18 @@ deleteAllForScope(scopeKey)
 
 ## 6. 사용자 식별 (PlayMCP 현실 대응)
 
-PlayMCP가 어떤 사용자 식별자를 전달하는지 공식 문서로 확정할 수 없으므로 방어적으로 설계한다:
-- `identity.ts`: 요청 헤더에서 순서대로 탐색 — `x-playmcp-user-id`, `x-user-id`, `x-forwarded-user`, (Authorization: Bearer JWT면 서명 검증 없이 sub 클레임 추출 시도). 발견 시 `scopeKey = sha256(SALT + value)` (SALT env `USER_SCOPE_SALT`, 기본 고정 문자열).
-- 아무것도 없으면 `scopeKey = "public"`. 이 경우 격리는 **childId의 비추측성**(ULID)에 의존한다 — childId를 아는 사람만 접근 가능한 capability 방식이며 전체 프로필 목록 조회는 차단한다. manage_child_profile 출력에 "childId를 잃어버리면 복구할 수 없으니 대화에 유지하세요" 안내 포함.
+사용자 식별은 인증된 PlayMCP 게이트웨이 경계를 전제로 보수적으로 처리한다:
+- `identity.ts`는 단일 문자열 `x-playmcp-user-id`만 신뢰한다. `x-user-id`, `x-forwarded-user`, 서명 검증 없는 JWT payload는 사용하지 않는다.
+- 게이트웨이는 외부 요청의 동명 헤더를 제거하고 인증된 사용자 값만 주입해야 한다. 발견 시 `scopeKey = sha256(USER_SCOPE_SALT + value)`로 격리한다.
+- 식별자가 없으면 `scopeKey = "public"`이지만 교육과정 검색·공개 학습경로 같은 비저장 조회만 허용한다. 프로필·점검·계획·진행 기록의 저장과 자녀별 이력 조회는 차단한다.
+- `NODE_ENV=production`에서는 `DATABASE_URL` 또는 `STORE_PATH`, 그리고 32바이트 이상의 `USER_SCOPE_SALT`가 없으면 서버가 시작하지 않는다.
 - http.ts에서 요청별 헤더를 도구 핸들러에 전달해야 한다: AsyncLocalStorage(`node:async_hooks`) 기반 request context로 구현 (stateless 요청별 서버 생성 패턴과 호환).
 
 ## 7. 개인정보 (PRD §10)
 
 - 프로필 스키마에 실명·학교명·연락처 필드를 두지 않는다. nickname 최대 20자.
+- 프로필 create는 `guardianConsent=true`를 요구하고 동의 버전·시각을 저장한다.
+- 모든 MCP 입력에서 이메일·전화번호·주민번호·카드번호로 보이는 값을 차단하고 원문을 오류에 되돌려 주지 않는다.
 - `manage_child_profile` action=read 출력에 저장된 전체 필드 표시(투명성), action=delete는 cascade 삭제 후 삭제된 레코드 수 보고.
 - 원문 대화 저장 금지: assess의 response 필드는 200자 절삭 저장.
 

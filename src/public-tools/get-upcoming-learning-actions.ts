@@ -7,9 +7,9 @@ import { getUserStore } from "../store/store.js";
 import { conceptView, requireChild, toolResult } from "./common.js";
 
 export const getUpcomingLearningActionsInputSchema = z.object({
-  childId: z.string().min(1),
-  asOf: z.string().optional(),
-  daysAhead: z.number().int().min(0).max(90).optional().default(30),
+  childId: z.string().min(1).describe("예정 활동을 조회할 기존 자녀 프로필 ID"),
+  asOf: z.string().optional().describe("기준일(YYYY-MM-DD). 생략하면 현재 날짜"),
+  daysAhead: z.number().int().min(0).max(90).optional().default(30).describe("기준일부터 조회할 일수. 기본 30, 범위 0~90이며 지연 항목은 별도 포함됩니다"),
 });
 
 async function handler(rawInput: unknown) {
@@ -69,7 +69,7 @@ async function handler(rawInput: unknown) {
 export const getUpcomingLearningActionsTool: ToolDefinition = {
   name: "get_upcoming_learning_actions",
   title: "예정 학습 행동 조회",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), return overdue, today's, and upcoming review activities and recommended rechecks in date order without modifying stored state.",
+  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), return overdue, today's, and upcoming review activities and recommended rechecks in date order without modifying stored state.",
   inputSchema: getUpcomingLearningActionsInputSchema,
   handler,
 };

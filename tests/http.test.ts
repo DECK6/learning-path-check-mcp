@@ -9,10 +9,12 @@ const TARGET = "kr.mt.math.number-operations.g5-6.s6-01-09.application";
 let server: Server;
 let baseUrl: string;
 
-async function mcpRequest(body: unknown, user = "http-guardian"): Promise<{ status: number; data: any }> {
+async function mcpRequest(body: unknown, user: string | null = "http-guardian"): Promise<{ status: number; data: any }> {
+  const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json, text/event-stream" };
+  if (user) headers["x-playmcp-user-id"] = user;
   const response = await fetch(`${baseUrl}/mcp`, {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "x-user-id": user },
+    headers,
     body: JSON.stringify(body),
   });
   const text = await response.text();
@@ -29,6 +31,7 @@ async function toolCall(name: string, args: Record<string, unknown>): Promise<an
 
 describe("stateless Streamable HTTP MCP server", () => {
   beforeAll(async () => {
+    process.env.USER_SCOPE_SALT = "http-test-salt-that-is-at-least-32-bytes";
     setUserStoreForTests(new MemoryStore());
     server = await startServer({ port: 0, host: "127.0.0.1" });
     baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -37,6 +40,7 @@ describe("stateless Streamable HTTP MCP server", () => {
   afterAll(async () => {
     await closeHttpServer(server);
     setUserStoreForTests();
+    delete process.env.USER_SCOPE_SALT;
   });
 
   test("health and three supported initialize versions work", async () => {
@@ -60,14 +64,23 @@ describe("stateless Streamable HTTP MCP server", () => {
       "manage_child_profile", "search_curriculum", "get_curriculum_overview", "trace_learning_path", "create_learning_check",
       "assess_learning_check", "build_review_plan", "record_learning_progress", "get_upcoming_learning_actions", "get_parent_learning_report",
     ]);
+    const manage = listed.data.result.tools.find((tool: any) => tool.name === "manage_child_profile");
     const search = listed.data.result.tools.find((tool: any) => tool.name === "search_curriculum");
     const assess = listed.data.result.tools.find((tool: any) => tool.name === "assess_learning_check");
+    expect(manage.annotations).toEqual({ readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false });
     expect(search.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
     expect(assess.annotations).toEqual({ readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false });
+    for (const tool of listed.data.result.tools) {
+      for (const property of Object.values(tool.inputSchema.properties ?? {}) as any[]) expect(property.description).toBeTruthy();
+    }
+    const responseProperties = assess.inputSchema.properties.responses.items.properties;
+    expect(responseProperties.questionId.description).toBeTruthy();
+    expect(responseProperties.outcome.description).toContain("ok");
+    expect(responseProperties.response.description).toBeTruthy();
   });
 
   test("profile through report succeeds over independent HTTP requests", async () => {
-    const profile = await toolCall("manage_child_profile", { action: "create", nickname: "HTTP 첫째", schoolLevel: "elementary", grade: 5, minutesPerDay: 10 });
+    const profile = await toolCall("manage_child_profile", { action: "create", nickname: "HTTP 첫째", schoolLevel: "elementary", grade: 5, minutesPerDay: 10, guardianConsent: true });
     const childId = profile.structuredContent.childId;
     const search = await toolCall("search_curriculum", { query: "분수 나눗셈", schoolLevel: "elementary", subject: "수학" });
     expect(search.structuredContent.results.some((result: any) => result.conceptId === TARGET)).toBe(true);
@@ -86,6 +99,42 @@ describe("stateless Streamable HTTP MCP server", () => {
     const report = await toolCall("get_parent_learning_report", { childId, period: "weekly", from: "2026-07-14", to: "2026-07-20" });
     expect(report.structuredContent.summary.reviewNeeded).toBeGreaterThan(0);
     expect(report.content[0].text).toContain(childId);
+  });
+
+  test("anonymous users can read public curriculum but cannot write or read child state", async () => {
+    const search = await mcpRequest({ jsonrpc: "2.0", id: 20, method: "tools/call", params: { name: "search_curriculum", arguments: { query: "분수 나눗셈" } } }, null);
+    expect(search.data.result.isError).not.toBe(true);
+    const create = await mcpRequest({ jsonrpc: "2.0", id: 21, method: "tools/call", params: { name: "manage_child_profile", arguments: { action: "create", nickname: "첫째", schoolLevel: "elementary", grade: 5, guardianConsent: true } } }, null);
+    expect(create.data.result.isError).toBe(true);
+    expect(create.data.result.content[0].text).toContain("로그인한 PlayMCP 사용자");
+
+    const profile = await toolCall("manage_child_profile", { action: "create", nickname: "인증 테스트", schoolLevel: "elementary", grade: 5, guardianConsent: true });
+    const childId = profile.structuredContent.childId;
+    const stateReads = [
+      { name: "get_parent_learning_report", arguments: { childId } },
+      { name: "get_upcoming_learning_actions", arguments: { childId } },
+      { name: "get_curriculum_overview", arguments: { schoolLevel: "elementary", grade: 5, subject: "수학", childId } },
+    ];
+    for (const [index, params] of stateReads.entries()) {
+      const response = await mcpRequest({ jsonrpc: "2.0", id: 30 + index, method: "tools/call", params }, null);
+      expect(response.data.result.isError).toBe(true);
+      expect(response.data.result.content[0].text).toContain("로그인한 PlayMCP 사용자");
+    }
+  });
+
+  test("obvious PII is rejected before schema validation without echoing the value", async () => {
+    const cases = [
+      { value: "parent@example.com", name: "search_curriculum", arguments: { query: "parent@example.com" } },
+      { value: "010-1234-5678", name: "record_learning_progress", arguments: { childId: "x", planId: "x", conceptId: "x", status: "010-1234-5678" } },
+      { value: "900101-1234567", name: "trace_learning_path", arguments: { conceptId: "900101-1234567" } },
+      { value: "child@example.com", name: "assess_learning_check", arguments: { childId: "x", checkId: "x", responses: [{ questionId: "child@example.com", outcome: "ok" }] } },
+    ];
+    for (const [index, item] of cases.entries()) {
+      const response = await mcpRequest({ jsonrpc: "2.0", id: 40 + index, method: "tools/call", params: { name: item.name, arguments: item.arguments } });
+      expect(response.data.result.isError).toBe(true);
+      expect(response.data.result.content[0].text).toContain("개인정보처럼 보이는 내용");
+      expect(response.data.result.content[0].text).not.toContain(item.value);
+    }
   });
 
   test("oversized, invalid, and unsupported requests are sanitized", async () => {

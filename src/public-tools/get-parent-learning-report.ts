@@ -8,10 +8,10 @@ import { getUserStore } from "../store/store.js";
 import { conceptView, requireChild, toolResult } from "./common.js";
 
 export const getParentLearningReportInputSchema = z.object({
-  childId: z.string().min(1),
-  period: z.enum(["weekly", "monthly"]).optional().default("weekly"),
-  from: z.string().optional(),
-  to: z.string().optional(),
+  childId: z.string().min(1).describe("리포트를 조회할 기존 자녀 프로필 ID"),
+  period: z.enum(["weekly", "monthly"]).optional().default("weekly").describe("기본 조회 기간: weekly 또는 monthly. from/to를 직접 주면 날짜 범위를 우선합니다"),
+  from: z.string().optional().describe("선택 시작일(YYYY-MM-DD, 포함). 생략하면 period 기준으로 계산합니다"),
+  to: z.string().optional().describe("선택 종료일(YYYY-MM-DD, 포함). 생략하면 현재 날짜이며 from보다 빠를 수 없습니다"),
 });
 
 async function handler(rawInput: unknown) {
@@ -94,7 +94,7 @@ async function handler(rawInput: unknown) {
 export const getParentLearningReportTool: ToolDefinition = {
   name: "get_parent_learning_report",
   title: "학부모 학습 리포트",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), summarize a child's weekly or monthly checks, review activity, observed change, priorities, and rechecks without grading or labeling the child.",
+  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), summarize a child's weekly or monthly checks, review activity, observed change, priorities, and rechecks without grading or labeling the child.",
   inputSchema: getParentLearningReportInputSchema,
   handler,
 };

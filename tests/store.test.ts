@@ -13,7 +13,7 @@ afterEach(async () => {
 });
 
 function fixtures() {
-  const child: ChildProfile = { id: "child-1", nickname: "첫째", schoolLevel: "elementary", grade: 5, interestedSubjects: ["수학"], learningGoals: [], createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" };
+  const child: ChildProfile = { id: "child-1", nickname: "첫째", schoolLevel: "elementary", grade: 5, interestedSubjects: ["수학"], learningGoals: [], guardianConsent: { version: "v1", grantedAt: "2026-07-01T00:00:00.000Z" }, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" };
   const check: LearningCheck = { id: "check-1", childId: child.id, targetConceptId: "concept-1", questions: [], createdAt: "2026-07-02T00:00:00.000Z" };
   const status: ConceptStatus = { id: "status-1", childId: child.id, conceptId: "concept-1", checkId: check.id, questionId: "q1", status: "review_needed", outcome: "partial", reason: "확인", delta: "new", assessedAt: "2026-07-03T12:00:00.000Z", recommendedRecheckDate: "2026-07-10" };
   const plan: ReviewPlan = { id: "plan-1", childId: child.id, targetConceptId: "concept-1", reviewConceptIds: ["concept-1"], durationWeeks: 1, minutesPerDay: 20, startDate: "2026-07-04", targetRetryDate: "2026-07-11", activities: [], calendarEvents: [], createdAt: "2026-07-03T00:00:00.000Z" };

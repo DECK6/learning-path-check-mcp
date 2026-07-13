@@ -10,6 +10,10 @@ export interface ChildProfile {
   interestedSubjects: string[];
   learningGoals: string[];
   minutesPerDay?: number;
+  guardianConsent?: {
+    version: "v1";
+    grantedAt: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

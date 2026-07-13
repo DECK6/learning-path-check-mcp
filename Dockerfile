@@ -8,7 +8,7 @@ RUN bun run build
 
 FROM oven/bun:1-slim
 WORKDIR /app
-ENV NODE_ENV=production PORT=8080
+ENV NODE_ENV=production PORT=8080 STORE_PATH=/data/learning-path-store.json
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json README.md NOTICE.md LICENSE ./

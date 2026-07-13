@@ -21,7 +21,7 @@ Korean Elementary Learning Map was independently built for the Korean 2022 Revis
 
 This distribution also compiles records from `korean-secondary-learning-map`. That source repository states that no rights to the official curriculum PDFs or their original text are granted, and that repository publication alone must not be interpreted as permission to use its code, schema, or data before a separate license is added.
 
-Official PDFs and extracted source text are not included here. The compiled subset contains identifiers, standards, source references, and repository-authored summaries; the source repository separately maintains document metadata, locators, and hashes. Their rights status must be reviewed before public or commercial redistribution. This is a release-rights hold, not a software defect.
+Official PDFs and extracted source text are not included here. The compiled subset contains identifiers, standards, source references, and repository-authored summaries; the source repository separately maintains document metadata, locators, and hashes. As of 2026-07-13, the repository owner has confirmed public redistribution rights for the repository-authored compiled subset used by this service. This confirmation does not relicense official curriculum publications or override upstream attribution and share-alike obligations.
 
 ## Official-source and non-endorsement notice
 

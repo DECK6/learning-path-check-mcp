@@ -69,7 +69,7 @@ async function handler(rawInput: unknown) {
 export const getUpcomingLearningActionsTool: ToolDefinition = {
   name: "get_upcoming_learning_actions",
   title: "예정 학습 행동 조회",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), return overdue, today's, and upcoming review activities and recommended rechecks in date order without modifying stored state.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), return overdue, today's, and upcoming review activities and recommended rechecks in date order without modifying stored state.",
   inputSchema: getUpcomingLearningActionsInputSchema,
   handler,
 };

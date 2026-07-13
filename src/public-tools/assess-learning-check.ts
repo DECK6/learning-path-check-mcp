@@ -89,7 +89,7 @@ async function handler(rawInput: unknown) {
 export const assessLearningCheckTool: ToolDefinition = {
   name: "assess_learning_check",
   title: "학습 점검 판정",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), store a deterministic learning status for every question. Before calling, map the child's answer to outcome=ok|partial|fail|unknown; free text alone is never graded by this server.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), store a deterministic learning status for every question. Before calling, map the child's answer to outcome=ok|partial|fail|unknown; free text alone is never graded by this server.",
   inputSchema: assessLearningCheckInputSchema,
   handler,
 };

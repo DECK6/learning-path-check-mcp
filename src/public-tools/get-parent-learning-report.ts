@@ -94,7 +94,7 @@ async function handler(rawInput: unknown) {
 export const getParentLearningReportTool: ToolDefinition = {
   name: "get_parent_learning_report",
   title: "학부모 학습 리포트",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), summarize a child's weekly or monthly checks, review activity, observed change, priorities, and rechecks without grading or labeling the child.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), summarize a child's weekly or monthly checks, review activity, observed change, priorities, and rechecks without grading or labeling the child.",
   inputSchema: getParentLearningReportInputSchema,
   handler,
 };

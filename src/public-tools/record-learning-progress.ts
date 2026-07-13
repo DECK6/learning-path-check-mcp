@@ -54,7 +54,7 @@ async function handler(rawInput: unknown) {
 export const recordLearningProgressTool: ToolDefinition = {
   name: "record_learning_progress",
   title: "복습 진행 기록",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), record a structured progress state and optional guardian observation for a saved review plan. activityId is required for a scheduled review activity and must match planId and conceptId; omit it only for the plan's targetConceptId recheck.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), record a structured progress state and optional guardian observation for a saved review plan. activityId is required for a scheduled review activity and must match planId and conceptId; omit it only for the plan's targetConceptId recheck.",
   inputSchema: recordLearningProgressInputSchema,
   handler,
 };

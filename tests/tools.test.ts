@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { concepts, edges } from "../src/domain/data.js";
 import { containsForbiddenLearningTerms, sanitizeLearningTerms } from "../src/presenters/terms.js";
-import { currentScopeKey, runWithRequestHeaders } from "../src/identity.js";
+import { currentScopeKey, runWithRequestHeaders, USER_TOKEN_HEADER } from "../src/identity.js";
 import type { McpToolResult, ToolDefinition } from "../src/lib/types.js";
 import { assessLearningCheckTool } from "../src/public-tools/assess-learning-check.js";
 import { buildReviewPlanTool } from "../src/public-tools/build-review-plan.js";
@@ -22,8 +22,10 @@ const TARGET = "kr.mt.math.number-operations.g5-6.s6-01-09.application";
 const TEST_SALT = "tools-test-salt-that-is-at-least-32-bytes";
 process.env.USER_SCOPE_SALT = TEST_SALT;
 
+const tokenFor = (user: string) => `test-token-${user}-`.padEnd(40, "x");
+
 async function call(tool: ToolDefinition, input: unknown, user = "guardian-a"): Promise<McpToolResult> {
-  return await runWithRequestHeaders({ "x-playmcp-user-id": user }, () => Promise.resolve(tool.handler(input)));
+  return await runWithRequestHeaders({ [USER_TOKEN_HEADER]: tokenFor(user) }, () => Promise.resolve(tool.handler(input)));
 }
 
 async function callPublic(tool: ToolDefinition, input: unknown): Promise<McpToolResult> {
@@ -50,7 +52,7 @@ describe("public learning tools", () => {
     expect(TOOL_ANNOTATIONS.assess_learning_check.readOnlyHint).toBe(false);
     expect(PUBLIC_TOOLS.every((tool) => tool.description.includes("Learning Path Check(우리 아이 뭐 배우지? 체크)"))).toBe(true);
     const authenticatedTools = new Set(["manage_child_profile", "create_learning_check", "assess_learning_check", "build_review_plan", "record_learning_progress", "get_upcoming_learning_actions", "get_parent_learning_report"]);
-    expect(PUBLIC_TOOLS.filter((tool) => authenticatedTools.has(tool.name)).every((tool) => tool.description.includes("Requires an authenticated PlayMCP user"))).toBe(true);
+    expect(PUBLIC_TOOLS.filter((tool) => authenticatedTools.has(tool.name)).every((tool) => tool.description.includes("Requires a connected PlayMCP Key/Token credential"))).toBe(true);
     const sanitized = sanitizeLearningTerms("아이는 이 개념을 모릅니다. 학습부진입니다. 학년 수준에 미달합니다.");
     expect(containsForbiddenLearningTerms(sanitized)).toBe(false);
   });
@@ -186,8 +188,8 @@ describe("public learning tools", () => {
   test("anonymous users can search but cannot create or read profiles", async () => {
     const search = await callPublic(searchCurriculumTool, { query: "분수 나눗셈", schoolLevel: "elementary" });
     expect(body(search).status).toBe("ok");
-    await expect(callPublic(manageChildProfileTool, { action: "create", nickname: "공개 스코프", schoolLevel: "elementary", grade: 3, guardianConsent: true })).rejects.toThrow("로그인한 PlayMCP 사용자");
-    await expect(callPublic(manageChildProfileTool, { action: "read" })).rejects.toThrow("로그인한 PlayMCP 사용자");
+    await expect(callPublic(manageChildProfileTool, { action: "create", nickname: "공개 스코프", schoolLevel: "elementary", grade: 3, guardianConsent: true })).rejects.toThrow("32자 이상의 비밀 토큰");
+    await expect(callPublic(manageChildProfileTool, { action: "read" })).rejects.toThrow("32자 이상의 비밀 토큰");
   });
 
   test("profile create requires consent and obvious PII is rejected", async () => {
@@ -205,7 +207,7 @@ describe("public learning tools", () => {
   test("legacy profiles require explicit re-consent without crashing reads", async () => {
     const store = new MemoryStore();
     setUserStoreForTests(store);
-    const scopeKey = runWithRequestHeaders({ "x-playmcp-user-id": "legacy-guardian" }, currentScopeKey);
+    const scopeKey = runWithRequestHeaders({ [USER_TOKEN_HEADER]: tokenFor("legacy-guardian") }, currentScopeKey);
     await store.upsertChild(scopeKey, {
       id: "child-legacy",
       nickname: "기존 프로필",

@@ -168,10 +168,12 @@ deleteAllForScope(scopeKey)
 
 ## 6. 사용자 식별 (PlayMCP 현실 대응)
 
-사용자 식별은 인증된 PlayMCP 게이트웨이 경계를 전제로 보수적으로 처리한다:
-- `identity.ts`는 단일 문자열 `x-playmcp-user-id`만 신뢰한다. `x-user-id`, `x-forwarded-user`, 서명 검증 없는 JWT payload는 사용하지 않는다.
-- 게이트웨이는 외부 요청의 동명 헤더를 제거하고 인증된 사용자 값만 주입해야 한다. 발견 시 `scopeKey = sha256(USER_SCOPE_SALT + value)`로 격리한다.
-- 식별자가 없으면 `scopeKey = "public"`이지만 교육과정 검색·공개 학습경로 같은 비저장 조회만 허용한다. 프로필·점검·계획·진행 기록의 저장과 자녀별 이력 조회는 차단한다.
+사용자 상태는 PlayMCP 커스텀 헤더 인증을 capability 방식으로 처리한다:
+- PlayMCP 등록에서 `Key/Token 인증` 필드명을 `x-learning-path-token`으로 설정한다.
+- `identity.ts`는 단일 문자열 `x-learning-path-token`만 신뢰하며 32자 이상 256자 이하를 요구한다. `x-playmcp-user-id`, `x-user-id`, `x-forwarded-user`, 서명 검증 없는 JWT payload는 사용하지 않는다.
+- 사용자는 비밀번호 관리자로 생성한 사용자별 무작위 토큰을 PlayMCP에 연결한다. 발견 시 `scopeKey = sha256(USER_SCOPE_SALT + token)`으로 격리하며 원문 토큰은 저장·반환·기록하지 않는다.
+- 토큰은 해당 스코프의 인증 capability다. 분실·변경 시 기존 스코프를 복구할 수 없고 노출 시 접근권한도 넘어가므로 안전하게 보관한다.
+- 토큰이 없거나 너무 짧으면 `scopeKey = "public"`이지만 교육과정 검색·공개 학습경로 같은 비저장 조회만 허용한다. 프로필·점검·계획·진행 기록의 저장과 자녀별 이력 조회는 차단한다.
 - `NODE_ENV=production`에서는 `DATABASE_URL` 또는 `STORE_PATH`, 그리고 32바이트 이상의 `USER_SCOPE_SALT`가 없으면 서버가 시작하지 않는다.
 - http.ts에서 요청별 헤더를 도구 핸들러에 전달해야 한다: AsyncLocalStorage(`node:async_hooks`) 기반 request context로 구현 (stateless 요청별 서버 생성 패턴과 호환).
 

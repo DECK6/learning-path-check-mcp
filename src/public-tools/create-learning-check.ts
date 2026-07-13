@@ -46,7 +46,7 @@ async function handler(rawInput: unknown) {
 export const createLearningCheckTool: ToolDefinition = {
   name: "create_learning_check",
   title: "학습 점검 생성",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), create and save deterministic check questions only from compiled assessment prompts and evidence for a target concept and its reviewed prerequisites. Returns checkId and questionId values for assess_learning_check.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), create and save deterministic check questions only from compiled assessment prompts and evidence for a target concept and its reviewed prerequisites. Returns checkId and questionId values for assess_learning_check.",
   inputSchema: createLearningCheckInputSchema,
   handler,
 };

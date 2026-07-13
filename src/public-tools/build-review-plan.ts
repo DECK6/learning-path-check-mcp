@@ -80,7 +80,7 @@ async function handler(rawInput: unknown) {
 export const buildReviewPlanTool: ToolDefinition = {
   name: "build_review_plan",
   title: "복습 계획 만들기",
-  description: "Requires an authenticated PlayMCP user. With Learning Path Check(우리 아이 뭐 배우지? 체크), create and store a prerequisite-ordered daily review plan and calendar-ready events. Provide reviewConceptIds, or omit them only when the child already has saved review_needed concept statuses.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. With Learning Path Check(우리 아이 뭐 배우지? 체크), create and store a prerequisite-ordered daily review plan and calendar-ready events. Provide reviewConceptIds, or omit them only when the child already has saved review_needed concept statuses.",
   inputSchema: buildReviewPlanInputSchema,
   handler,
 };

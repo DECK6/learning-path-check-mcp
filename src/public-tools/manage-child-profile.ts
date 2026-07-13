@@ -48,7 +48,7 @@ async function handler(rawInput: unknown) {
       updatedAt: now,
     };
     await store.upsertChild(scopeKey, child);
-    const scopeNotice = "프로필은 로그인한 PlayMCP 사용자 스코프에 격리 저장됩니다.";
+    const scopeNotice = "프로필은 연결된 PlayMCP 비밀 토큰별 스코프에 격리 저장됩니다.";
     return toolResult(`# 자녀 프로필 생성\n\n- childId: ${child.id}\n- 별명: ${child.nickname}\n- 학교급·학년: ${child.schoolLevel} ${child.grade}학년\n- 보호자 저장 동의: ${consent.version} · ${consent.grantedAt}\n- 저장 항목: 별명, 학교급·학년, 관심 과목, 학습 목표, 학습 가능 시간\n- 저장하지 않는 항목: 실명, 학교명, 연락처, 주소, 성적표 원본\n\n${scopeNotice}`, { action: "create", childId: child.id, profile: child, consent, scopeNotice });
   }
   if (input.action === "read") {
@@ -91,7 +91,7 @@ async function handler(rawInput: unknown) {
 export const manageChildProfileTool: ToolDefinition = {
   name: "manage_child_profile",
   title: "자녀 프로필 관리",
-  description: "Requires an authenticated PlayMCP user. Create, read, update, or cascade-delete a privacy-minimized child profile with Learning Path Check(우리 아이 뭐 배우지? 체크). Before create or re-consenting a legacy profile, explain the stored fields and ask the guardian for explicit consent; never infer consent. Create requires nickname, schoolLevel, grade, and guardianConsent=true. Update and delete require childId. Delete also requires explicit confirmation with confirmDelete=true and removes the child's checks, statuses, plans, and progress records.",
+  description: "Requires a connected PlayMCP Key/Token credential of at least 32 characters. Create, read, update, or cascade-delete a privacy-minimized child profile with Learning Path Check(우리 아이 뭐 배우지? 체크). Before create or re-consenting a legacy profile, explain the stored fields and ask the guardian for explicit consent; never infer consent. Create requires nickname, schoolLevel, grade, and guardianConsent=true. Update and delete require childId. Delete also requires explicit confirmation with confirmDelete=true and removes the child's checks, statuses, plans, and progress records.",
   inputSchema: manageChildProfileInputSchema,
   handler,
 };

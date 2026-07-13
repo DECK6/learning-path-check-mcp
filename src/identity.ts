@@ -5,11 +5,13 @@ export type RequestHeaders = Record<string, string | string[] | undefined>;
 
 const context = new AsyncLocalStorage<RequestHeaders>();
 
-function playMcpUserId(): string | undefined {
-  const value = (context.getStore() ?? {})["x-playmcp-user-id"];
+export const USER_TOKEN_HEADER = "x-learning-path-token";
+
+function userAccessToken(): string | undefined {
+  const value = (context.getStore() ?? {})[USER_TOKEN_HEADER];
   if (typeof value !== "string") return undefined;
   const normalized = value.trim();
-  if (!normalized || normalized.length > 256 || /[,\r\n]/.test(normalized)) return undefined;
+  if (Buffer.byteLength(normalized, "utf8") < 32 || normalized.length > 256 || /[,\r\n]/.test(normalized)) return undefined;
   return normalized;
 }
 
@@ -26,13 +28,13 @@ export function runWithRequestHeaders<T>(headers: RequestHeaders, callback: () =
 }
 
 export function currentScopeKey(): string {
-  const identity = playMcpUserId();
-  if (!identity) return "public";
-  return createHash("sha256").update(`${scopeSalt()}\0${identity}`).digest("hex");
+  const token = userAccessToken();
+  if (!token) return "public";
+  return createHash("sha256").update(`${scopeSalt()}\0${token}`).digest("hex");
 }
 
 export function requireAuthenticatedScopeKey(): string {
-  if (!playMcpUserId()) throw new Error("로그인한 PlayMCP 사용자만 학습 기록을 저장하거나 조회할 수 있습니다.");
+  if (!userAccessToken()) throw new Error("학습 기록을 저장하거나 조회하려면 PlayMCP Key/Token 연결에 32자 이상의 비밀 토큰이 필요합니다.");
   return currentScopeKey();
 }
 

@@ -59,7 +59,7 @@ async function handler(rawInput: unknown) {
 export const getCurriculumOverviewTool: ToolDefinition = {
   name: "get_curriculum_overview",
   title: "교육과정 개요",
-  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), show curriculum domains, standards, and topics for a school level and subject. Optional childId only overlays that authenticated user's stored check history and never changes state.",
+  description: "With Learning Path Check(우리 아이 뭐 배우지? 체크), show curriculum domains, standards, and topics for a school level and subject. Optional childId requires a connected PlayMCP Key/Token credential and only overlays that token scope's stored check history and never changes state.",
   inputSchema: getCurriculumOverviewInputSchema,
   handler,
 };

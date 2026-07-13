@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { USER_TOKEN_HEADER } from "../src/identity.js";
 import { closeHttpServer, startServer } from "../src/server/http.js";
 import { MemoryStore } from "../src/store/memory-store.js";
 import { setUserStoreForTests } from "../src/store/store.js";
@@ -11,7 +12,7 @@ let baseUrl: string;
 
 async function mcpRequest(body: unknown, user: string | null = "http-guardian"): Promise<{ status: number; data: any }> {
   const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json, text/event-stream" };
-  if (user) headers["x-playmcp-user-id"] = user;
+  if (user) headers[USER_TOKEN_HEADER] = `http-test-token-${user}-`.padEnd(40, "x");
   const response = await fetch(`${baseUrl}/mcp`, {
     method: "POST",
     headers,
@@ -106,7 +107,7 @@ describe("stateless Streamable HTTP MCP server", () => {
     expect(search.data.result.isError).not.toBe(true);
     const create = await mcpRequest({ jsonrpc: "2.0", id: 21, method: "tools/call", params: { name: "manage_child_profile", arguments: { action: "create", nickname: "첫째", schoolLevel: "elementary", grade: 5, guardianConsent: true } } }, null);
     expect(create.data.result.isError).toBe(true);
-    expect(create.data.result.content[0].text).toContain("로그인한 PlayMCP 사용자");
+    expect(create.data.result.content[0].text).toContain("32자 이상의 비밀 토큰");
 
     const profile = await toolCall("manage_child_profile", { action: "create", nickname: "인증 테스트", schoolLevel: "elementary", grade: 5, guardianConsent: true });
     const childId = profile.structuredContent.childId;
@@ -118,7 +119,7 @@ describe("stateless Streamable HTTP MCP server", () => {
     for (const [index, params] of stateReads.entries()) {
       const response = await mcpRequest({ jsonrpc: "2.0", id: 30 + index, method: "tools/call", params }, null);
       expect(response.data.result.isError).toBe(true);
-      expect(response.data.result.content[0].text).toContain("로그인한 PlayMCP 사용자");
+      expect(response.data.result.content[0].text).toContain("32자 이상의 비밀 토큰");
     }
   });
 

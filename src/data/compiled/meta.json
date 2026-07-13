@@ -1,0 +1,43 @@
+{
+  "compiledAt": "2026-07-13T00:00:00.000Z",
+  "dataVersion": {
+    "elementary": "kr-full-depth-v0.4",
+    "middle": "kr-2022-middle-v0.4.0-candidate",
+    "high": "kr-2022-high-v0.4.0-candidate",
+    "bridges": "kr-2022-middle-high-bridge-v0.4.0-candidate"
+  },
+  "counts": {
+    "concepts": 7506,
+    "topicConcepts": 7240,
+    "courseConcepts": 266,
+    "elementaryTopics": 1956,
+    "middleTopics": 2160,
+    "highAcademicTopics": 3124,
+    "edges": 7100,
+    "elementaryPrerequisites": 1894,
+    "middlePrerequisites": 2155,
+    "highAcademicPrerequisites": 2932,
+    "crossSchoolPrerequisites": 19,
+    "transitions": 50,
+    "courseRelations": 39,
+    "subjectContinuations": 11
+  },
+  "exclusions": {
+    "highVocationalCourses": 528,
+    "highVocationalTopics": 47625,
+    "noticeKo": "P0는 고등학교 공통·일반·진로·융합 선택 및 교양·계열 과목을 지원하며 직업계 전문교과는 제외합니다.",
+    "keywords": [
+      "간호",
+      "조리",
+      "용접",
+      "미용",
+      "제과",
+      "제빵",
+      "자동차 정비",
+      "기계 가공",
+      "전기 설비",
+      "수산",
+      "해운"
+    ]
+  }
+}

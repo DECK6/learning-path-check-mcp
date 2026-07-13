@@ -22,17 +22,18 @@
 | 자산 | 개념(topic) | 개념 선수관계 | 상위 관계 |
 |---|---|---|---|
 | 초등 (`data/kr/`) | 1,956 | **1,894 (hard/soft·reason·basis)** | clusters 153 |
-| 중학교 (`data/kr/middle/`) | 2,160 | **0** | courses 24, domains 149, standards 714 |
-| 고교 (`data/kr/high/`) | 50,749 | **0** | courses 759, domains 5,169, course-relations 473, pathways 33 |
-| 브릿지 (`data/kr/bridges/`) | — | — | 중→고 전이 후보 398 (reviewStatus: candidate) |
+| 중학교 (`data/kr/middle/`) | 2,160 | **2,155** | courses 24, domains 149, standards 714 |
+| 고교 전체 원천 (`data/kr/high/`) | 50,749 | **50,029** | courses 759, 학술계·직업계 전체 지도 |
+| 고교 P0 컴파일 범위 | 3,124 | **2,932** | courses 231, 공통·선택·교양·계열 범위 |
+| 브릿지 (`data/kr/bridges/`) | — | 초→중 19 | 중→고 전이 50, 고교 과정 관계 39 |
 
 **절대 원칙 (중등 레포 README에서 승계): 근거 없는 선수관계를 생성하지 않는다.**
 
-1. 개념 수준 역추적(`trace_learning_path`의 선수개념 경로)은 **초등에서만** 제공한다.
-2. 중·고는 과목·영역·학년군 수준 경로와 전이 후보만 제공하며, 모든 후보 관계에 `reviewStatus`(예: candidate)와 `basisKind`를 그대로 노출하고 "검토 후보 관계"라고 표기한다.
-3. 초등→중등 브릿지는 데이터에 없다. 같은 교과(예: Mathematics→수학) 연결은 `subject-continuation`(자동 교과 연결)이라는 별도 관계 종류로만 제공하고, 선수관계라고 표현하지 않는다.
+1. 개념 수준 역추적(`trace_learning_path`)은 검토 완료된 초·중·고 선수관계에서 제공한다.
+2. `required-prerequisite`와 `recommended-before`를 구분하고 모든 관계에 `reviewStatus`, `basisKind`, 근거와 출처를 노출한다. 과정 수준 전이는 개념 선수관계나 공식 이수 요건으로 표현하지 않는다.
+3. 검토된 초등→중등 개념 관계 19건은 `prerequisite`로 제공한다. 별도의 같은 교과 연결은 `subject-continuation`이라는 과정 수준 관계로만 제공하고 선수관계라고 표현하지 않는다.
 4. 성취기준 코드는 데이터에 있는 것만 출력한다. 존재하지 않는 코드 생성 0건 (테스트로 강제).
-5. 고교 **직업계 전문교과(성취기준 47,625건, 전체의 93.8%)는 P0 컴파일에서 제외**한다. 검색 시 해당 범위 질문이 오면 "P0는 공통·일반·진로·융합 선택 과목까지 지원합니다" 안내를 반환한다(PRD §14 마지막 항목의 '범위 안내').
+5. 고교 **직업계 전문교과(세부 토픽 47,625건, 전체 고교 토픽의 93.8%)는 P0 컴파일에서 제외**한다. 검색 시 해당 범위 질문이 오면 "P0는 공통·일반·진로·융합 선택 과목까지 지원합니다" 안내를 반환한다(PRD §14 마지막 항목의 '범위 안내').
 
 ## 2. 빌드 파이프라인: 데이터 컴파일러
 
@@ -50,12 +51,12 @@
     ```
   - `edges.json` — 관계. 공통 스키마:
     ```
-    { from, to, kind(prerequisite|supports|leadsTo|course-relation|transition|subject-continuation),
+    { from, to, kind(prerequisite|course-relation|transition|subject-continuation),
       strength?, reason?, basis, reviewStatus? }
     ```
     - 초등 dependencies 1,894건 → kind=prerequisite
-    - 고교 course-relations 473건, pathways, 중→고 transitions 398건 → 해당 kind로
-    - subject-continuation: 초등 과목→중등 course, 중등 course→고교 공통과목. **교과군 매핑 테이블을 명시적으로 하드코딩**(수학·국어·영어·과학·사회·도덕·체육·음악·미술·실과/기술가정 등)하고 basis="repository-authored-continuation"으로 표시
+    - 중학교 학습관계 2,155건, P0 고교 학습관계 2,932건, 고교 과정관계 39건, 중→고 전이 50건 → 해당 kind로
+    - subject-continuation: 초등 과목→중등 course. **교과군 매핑 테이블을 명시적으로 하드코딩**(수학·국어·영어·과학·사회·도덕·체육·음악·미술·실과/기술가정 등)하고 basis="repository-authored-continuation"으로 표시
   - `search-index.json` — 개념별 검색 토큰(제목·과목·영역·성취기준 코드의 정규화 문자열). 런타임 재계산 방지용
   - `meta.json` — 원천 릴리스 버전(초등 manifest.version, 중등 release.json), 컴파일 일시, 카운트, 제외 범위 명세
 - 컴파일러는 참조 무결성을 검증한다: 모든 edge의 from/to가 concepts에 존재해야 하며, 위반 시 컴파일 실패.
@@ -107,10 +108,10 @@ tests/
 
 ## 4. 도구 10개 사양
 
-공통: PRD §6의 입출력을 따른다. 모든 결과의 `structuredContent`에 `meta: { service, version, dataVersion(초등/중등 릴리스 버전 병기), disclaimer }`. 후속 호출용 ID(childId/conceptId/checkId/questionId/planId)는 **Markdown 본문과 structuredContent 양쪽에** 반드시 포함 (PRD §9 프레젠터 요건). `kakao` 문자열 금지. 설명은 영문 기본 + "Learning Path Check(우리 아이 뭐 배우지? 체크)" 병기.
+공통: PRD §6의 입출력을 따른다. 모든 결과의 `structuredContent`에 `meta: { service, version, dataVersion(초등/중등 릴리스 버전 병기), disclaimer }`. 후속 호출용 ID(childId/conceptId/checkId/questionId/planId)는 **Markdown 본문과 structuredContent 양쪽에** 반드시 포함 (PRD §9 프레젠터 요건). 특정 플랫폼 전용 문자열은 넣지 않는다. 설명은 영문 기본 + "Learning Path Check(우리 아이 뭐 배우지? 체크)" 병기.
 
 annotations:
-- 조회 4종 (`search_curriculum`, `get_curriculum_overview`, `trace_learning_path`, `get_upcoming_learning_actions`, `get_parent_learning_report`): readOnly=true, idempotent=true, destructive=false, openWorld=false
+- 조회 5종 (`search_curriculum`, `get_curriculum_overview`, `trace_learning_path`, `get_upcoming_learning_actions`, `get_parent_learning_report`): readOnly=true, idempotent=true, destructive=false, openWorld=false
   - 단 overview/upcoming/report는 프로필을 읽으므로 readOnly=true 유지(상태 변경 없음)
 - 쓰기 5종 (`manage_child_profile`, `create_learning_check`, `assess_learning_check`, `build_review_plan`, `record_learning_progress`): readOnly=false, idempotent=false, destructive=false, openWorld=false
   - `manage_child_profile`의 action=delete도 destructiveHint=false로 두되 삭제 전 확인 문구를 출력에 포함
@@ -123,12 +124,12 @@ annotations:
 
 ### `trace_learning_path`
 - 초등 개념: prerequisite 엣지 역방향 BFS (깊이 제한 `MAX_TRACE_DEPTH=6`, 순환 가드). 각 노드에 strength·reason·성취기준 코드.
-- 후속 경로: supports/leadsTo/전방 prerequisite + subject-continuation + (중등 개념이면) transition.
-- 중·고 개념: "개념 수준 선수관계는 초등만 지원" 명시 + 과목·영역·학년군 경로와 전이 후보 반환.
-- 학교급 전이 구간은 `bridgesTo`로 표시하고 reviewStatus 병기.
+- 후속 경로: 전방 prerequisite + subject-continuation + transition + course-relation.
+- 중·고 개념: 검토된 개념 선수관계와 과정·학교급 전이를 각각의 관계 종류·근거와 함께 반환.
+- 학교급 전이 구간은 `transition`으로 표시하고 reviewStatus를 병기한다.
 
 ### `create_learning_check`
-- 대상 개념의 선수 체인에서 가까운 순서로 최대 `itemCount`(기본 5, 최대 8)개 개념 선택.
+- 대상 개념의 선수 체인에서 가장 기초인 항목부터 최대 `itemCount`(기본 5, 최대 8)개 개념 선택.
 - 각 개념의 질문은 컴파일된 `assessmentPrompt`/`evidence`에서 **결정론적으로** 구성 (개념당 1문항, questionId = checkId + 순번). 원문에 없는 질문을 지어내지 않는다.
 - 출력에 "질문 순서의 이유"(선수 깊이) 포함. checkId는 ULID.
 
@@ -168,7 +169,7 @@ deleteAllForScope(scopeKey)
 
 PlayMCP가 어떤 사용자 식별자를 전달하는지 공식 문서로 확정할 수 없으므로 방어적으로 설계한다:
 - `identity.ts`: 요청 헤더에서 순서대로 탐색 — `x-playmcp-user-id`, `x-user-id`, `x-forwarded-user`, (Authorization: Bearer JWT면 서명 검증 없이 sub 클레임 추출 시도). 발견 시 `scopeKey = sha256(SALT + value)` (SALT env `USER_SCOPE_SALT`, 기본 고정 문자열).
-- 아무것도 없으면 `scopeKey = "public"`. 이 경우 격리는 **childId의 비추측성**(ULID)에 의존한다 — childId를 아는 사람만 접근 가능한 capability 방식. manage_child_profile 출력에 "childId를 잃어버리면 복구할 수 없으니 대화에 유지하세요" 안내 포함.
+- 아무것도 없으면 `scopeKey = "public"`. 이 경우 격리는 **childId의 비추측성**(ULID)에 의존한다 — childId를 아는 사람만 접근 가능한 capability 방식이며 전체 프로필 목록 조회는 차단한다. manage_child_profile 출력에 "childId를 잃어버리면 복구할 수 없으니 대화에 유지하세요" 안내 포함.
 - http.ts에서 요청별 헤더를 도구 핸들러에 전달해야 한다: AsyncLocalStorage(`node:async_hooks`) 기반 request context로 구현 (stateless 요청별 서버 생성 패턴과 호환).
 
 ## 7. 개인정보 (PRD §10)
@@ -179,7 +180,7 @@ PlayMCP가 어떤 사용자 식별자를 전달하는지 공식 문서로 확정
 
 ## 8. 서버 (PRD §9)
 
-- event-safety-check-mcp의 http.ts 포팅: `/mcp` POST(stateless streamable), `/health` GET → `{status:"ok",service:"learning-path-check-mcp",version:"0.1.0",tools:10,dataVersion:{elementary,secondary}}`, 413(256KB), 404, 에러 위생(스택·경로 노출 금지), 0.0.0.0, PORT env.
+- event-safety-check-mcp의 http.ts 포팅: `/mcp` POST(stateless streamable), `/health` GET → `{status:"ok",service:"learning-path-check-mcp",version:"0.1.0",tools:10,dataVersion:{elementary,middle,high,bridges}}`, 413(256KB), 404, 에러 위생(스택·경로 노출 금지), 0.0.0.0, PORT env.
 - 그래프·검색 인덱스는 모듈 레벨 1회 로드. 요청 처리 중 외부 네트워크 호출 금지 (postgres 제외).
 - package.json: `name: learning-path-check-mcp`, scripts { build: tsc(+compiled data가 build/로 복사되는지 확인), start, dev, typecheck, test, "compile:data": "bun scripts/compile-data.ts" }.
 - Dockerfile: event-safety 것 포팅 (bun 멀티스테이지, 비루트, HEALTHCHECK).
@@ -187,14 +188,14 @@ PlayMCP가 어떤 사용자 식별자를 전달하는지 공식 문서로 확정
 ## 9. 테스트 (PRD §13·§14 수용 기준)
 
 `tests/graph.test.ts`:
-- 참조 무결성: 모든 엣지 from/to 존재. 순환 없음(초등 prerequisite), 존재하지 않는 성취기준 코드 0건(출력 코드가 전부 컴파일 데이터에 존재).
+- 참조 무결성: 모든 엣지 from/to 존재. 순환 없음(전체 prerequisite), 존재하지 않는 성취기준 코드 0건(출력 코드가 전부 컴파일 데이터에 존재).
 - 분수 나눗셈류 초등 수학 개념의 역추적이 2단계 이상 나오는지.
 
 `tests/tools.test.ts` (핸들러 직접 호출):
 1. 프로필 CRUD + 삭제 cascade
 2. search: 정상 / not_found / ambiguous / 직업계 범위 안내
 3. overview: 초5 수학 — 영역·성취기준 포함, 프로필 이력 반영
-4. trace: 초등 개념 선수경로 + 중등 개념의 "과정 수준" 응답 구분
+4. trace: 초등·중등·고등 개념 선수경로 + 과정 수준 전이 응답 구분
 5. check 생성 → outcome 조합별 판정(understood/review_needed/needs_more_info) → 가장 기초 개념이 첫 복습 지점
 6. 재점검 delta: 같은 개념 재판정 시 improved 표시
 7. plan: 위상정렬 순서, 기간 분배, calendarEvents 존재
@@ -210,7 +211,7 @@ PlayMCP가 어떤 사용자 식별자를 전달하는지 공식 문서로 확정
 
 ## 10. 문서
 
-- README.md: 제품 소개, 핵심 메시지("AI가 공부를 가르치기 전에, 무엇을 어떤 순서로 배워야 하는지부터"), 데이터 자산·버전, 도구 10개 표, 초등=개념 수준·중고=과정 수준 정직 고지, 실행법, env 표(DATABASE_URL/STORE_PATH/USER_SCOPE_SALT/PORT), AI School 벤치마크 링크.
+- README.md: 제품 소개, 핵심 메시지("AI가 공부를 가르치기 전에, 무엇을 어떤 순서로 배워야 하는지부터"), 데이터 자산·버전, 도구 10개 표, 초·중·고 개념 관계와 과정 전이의 의미 구분, 실행법, env 표(DATABASE_URL/STORE_PATH/USER_SCOPE_SALT/PORT/TIME_ZONE), AI School 벤치마크 맥락 링크.
 - NOTICE.md: 두 온톨로지 레포의 NOTICE·LICENSE-CONTENT 승계 + 교육부 고시·NCIC 출처 고지.
 
 ## 11. 완료 정의

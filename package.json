@@ -1,0 +1,43 @@
+{
+  "name": "learning-path-check-mcp",
+  "version": "0.1.0",
+  "description": "Learning Path Check(우리 아이 뭐 배우지? 체크), a deterministic Korean K-12 curriculum and review-planning MCP server.",
+  "type": "module",
+  "main": "build/server/main.js",
+  "files": [
+    "build/",
+    "README.md",
+    "NOTICE.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "compile:data": "bun scripts/compile-data.ts",
+    "copy:data": "bun scripts/copy-compiled-data.ts",
+    "build": "tsc && bun run copy:data",
+    "start": "bun build/server/main.js",
+    "dev": "bun src/server/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "verify": "bun run typecheck && bun test && bun run build"
+  },
+  "keywords": [
+    "mcp",
+    "education",
+    "curriculum",
+    "learning-path",
+    "korea"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20.19.0",
+    "bun": ">=1.3.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "typescript": "^5.7.2"
+  }
+}

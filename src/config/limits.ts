@@ -1,0 +1,10 @@
+export const MAX_BODY_BYTES = 256 * 1024;
+export const MAX_TRACE_DEPTH = 6;
+export const DEFAULT_SEARCH_LIMIT = 5;
+export const MAX_SEARCH_LIMIT = 10;
+export const DEFAULT_CHECK_ITEMS = 5;
+export const MAX_CHECK_ITEMS = 8;
+export const MAX_NICKNAME_CHARS = 20;
+export const MAX_RESPONSE_CHARS = 200;
+export const MAX_OBSERVATION_CHARS = 500;
+export const MAX_SCOPE_COUNT = 500;
